@@ -1,0 +1,31 @@
+<div class="layui-header">
+    <ul class="layui-nav layui-layout-left">
+        <li class="layui-nav-item" lay-unselect>
+            <a class="text-center" data-target-menu-type>
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </a>
+        </li>
+        <li class="layui-nav-item" lay-unselect>
+            <a class="layui-logo-hide layui-elip" href="{:sysuri('@')}" title="{:sysconf('app_name')}">
+                <span class="headimg headimg-no headimg-xs" data-lazy-src="{:sysconf('site_icon')}"></span>
+            </a>
+        </li>
+        {foreach $menus as $one}
+        <li class="layui-nav-item">
+            <a data-menu-node="m-{$one.id}" data-open="{$one.url}"><span>{$one.title|default=''}</span></a>
+        </li>
+        {/foreach}
+    </ul>
+    <ul class="layui-nav layui-layout-right">
+        {if session('user.username')}
+        <li class="layui-nav-item">
+            <a data-modal="{:sysuri('admin/index/info',['id'=>session('user.id')])}">
+                <i class="layui-icon layui-icon-username"></i>&nbsp;{:lang('个人資料')}</a>
+        </li>
+        {else}
+        <li class="layui-nav-item">
+            <a data-href="{:sysuri('admin/login/index')}"><i class="layui-icon layui-icon-username"></i>&nbsp;{:lang('立即登录')}</a>
+        </li>
+        {/if}
+    </ul>
+</div>

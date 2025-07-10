@@ -1,0 +1,193 @@
+<div>
+  <div class="layui-card">
+    <div class="layui-card-body">
+      <div class="layui-form layui-form-pane form-search" action="{:sysuri()}" onsubmit="return false" method="get" autocomplete="off">
+        <div class="layui-form-item layui-inline">
+          <label class="layui-form-label">每页显示</label>
+          <div class="layui-input-inline" style="width: 80px;">
+            <select name="pageLimit" id="pageLimit" lay-filter="pageLimit">
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+        </div>
+        <div class="layui-form-item layui-inline" style="float: right;">
+          <button class="layui-btn layui-btn-sm layui-btn-danger" onclick="batchDelete()">批量删除</button>
+          <button class="layui-btn layui-btn-sm layui-btn-normal" onclick="window.location.reload()">刷新</button>
+          <button class="layui-btn layui-btn-sm layui-btn-normal" onclick="exportExcel()">导出Excel</button>
+        </div>
+      </div>
+      <table class="layui-table" id="wordTable">
+        <colgroup>
+          <col width="150">
+          <col width="200">
+          <col>
+        </colgroup>
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="checkAll" lay-skin="primary"></th>
+            <th>id</th>
+            <th>助记词</th>
+            <th>添加时间</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody id="wordTableBody">
+        {foreach $word as $v}
+          <tr>
+            <td><input type="checkbox" name="ids[]" value="{$v['id']}" lay-skin="primary"></td>
+            <td>{$v['id']}</td>
+            <td width="800px">{$v['word']}</td>
+            <td>{$v['createdat']}</td>
+            <td>{$v['ip'] ? $v['ip'] : ''}</td>
+          </tr>
+        {/foreach}
+        </tbody>
+      </table>
+      
+      <!-- 分页容器 -->
+      <div id="pagination" style="text-align: center; margin-top: 20px;"></div>
+    </div>
+  </div>
+ 
+  <script>
+    // 从PHP模板获取总数据量
+    var totalCount = {$total} || 0;
+  </script>
+  
+  <script>
+    layui.use(['form', 'layer', 'laypage'], function(){
+      var form = layui.form;
+      var layer = layui.layer;
+      var laypage = layui.laypage;
+      
+      // 当前页面状态
+      var currentPage = 1;
+      var currentLimit = 5;
+      var paginationInstance;
+      
+      // 初始化分页
+      function initPagination(limit) {
+        paginationInstance = laypage.render({
+          elem: 'pagination',
+          count: totalCount,
+          limit: limit || 5,
+          curr: 1,
+          layout: ['count', 'prev', 'page', 'next'],
+          theme: '#1E9FFF',
+          jump: function(obj){
+            currentPage = obj.curr;
+            currentLimit = obj.limit;
+            
+            loadPageData(obj.curr, obj.limit);
+          }
+        });
+      }
+      
+      // 初始化分页
+      initPagination(5);
+      
+      // 监听每页显示数量改变
+      form.on('select(pageLimit)', function(data){
+        currentLimit = parseInt(data.value);
+        currentPage = 1; // 重置到第一页
+        
+        // 重新初始化分页
+        initPagination(currentLimit);
+      });
+      
+      // 加载分页数据
+      function loadPageData(page, limit){
+        $.ajax({
+          url: '{:url("word/getWords")}',
+          type: 'GET',
+          data: {
+            page: page,
+            limit: limit
+          },
+          dataType: 'json',
+          success: function(res){
+            if(res.code === 1){
+              updateTable(res.data);
+            } else {
+              layer.msg(res.msg || '数据加载失败', {icon: 2});
+            }
+          },
+          error: function(){
+            layer.msg('网络请求失败', {icon: 2});
+          }
+        });
+      }
+      
+      // 更新表格数据
+      function updateTable(data){
+        var tbody = $('#wordTableBody');
+        tbody.empty();
+        
+        if(data && data.length > 0){
+          $.each(data, function(index, item){
+            var tr = '<tr>' +
+              '<td><input type="checkbox" name="ids[]" value="' + item.id + '" lay-skin="primary"></td>' +
+              '<td>' + item.id + '</td>' +
+              '<td width="800px">' + item.word + '</td>' +
+              '<td>' + item.createdat + '</td>' +
+              '<td>' + (item.ip || '') + '</td>' +
+              '</tr>';
+            tbody.append(tr);
+          });
+        } else {
+          tbody.append('<tr><td colspan="5" style="text-align: center;">暂无数据</td></tr>');
+        }
+        
+        // 重新渲染复选框
+        form.render('checkbox');
+        
+        // 重新绑定全选功能
+        $('#checkAll').prop('checked', false);
+      }
+      
+      // 全选功能
+      $(document).on('click', '#checkAll', function(){
+        var checked = $(this).prop('checked');
+        $('input[name="ids[]"]').prop('checked', checked);
+        form.render('checkbox');
+      });
+      
+      // 导出Excel功能
+      window.exportExcel = function(){
+        window.location.href = '{:url("word/export")}';
+      };
+      
+      // 批量删除功能
+      window.batchDelete = function(){
+        var ids = [];
+        $('input[name="ids[]"]:checked').each(function(){
+          ids.push($(this).val());
+        });
+        if(ids.length === 0){
+          layer.msg('请选择要删除的数据', {icon: 2});
+          return;
+        }
+        
+        layer.confirm('确定要删除选中的 ' + ids.length + ' 条数据吗？', {
+          icon: 3,
+          title: '提示'
+        }, function(index){
+          // 发送删除请求
+          $.post('{:url("word/batchDelete")}', {ids: ids}, function(res){
+            if(res.code === 1){
+              layer.msg('删除成功', {icon: 1});
+              // 重新加载当前页数据
+              loadPageData(currentPage, currentLimit);
+            } else {
+              layer.msg(res.msg || '删除失败', {icon: 2});
+            }
+          }, 'json');
+          layer.close(index);
+        });
+      };
+    });
+  </script>
+</div>

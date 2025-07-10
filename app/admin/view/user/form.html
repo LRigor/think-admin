@@ -1,0 +1,72 @@
+<div class="layui-card">
+    <form id="passwordForm" class="layui-form"> 
+        <div class="layui-card-body padding-left-40">
+            <fieldset class="layui-bg-gray">
+                <div class="layui-row layui-col-space15">
+                    <div class="layui-col-xs12">
+                        <label class="block relative">
+                            <span class="help-label"><b>登录账号</b></span>
+                            {if isset($vo) and isset($vo.username)}
+                            <input name="username" value='{$vo.username|default=""}' required readonly class="layui-input think-bg-gray">
+                            {else}
+                            <input name="username" value='{$vo.username|default=""}' required pattern="^.{4,}$" vali-name="登录账号" placeholder="请输入登录账号" class="layui-input">
+                            {/if}
+                            <span class="help-block">登录账号不能少于4位字符，创建后不能再次修改.</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="layui-row layui-col-space15">
+                    <div class="layui-col-xs6">
+                        <label class="block relative">
+                            <span class="help-label"><b>新密码</b></span>
+                            <input type="password" name="new_password" autocomplete="new-password" pattern="^.{6,}$" vali-name="新密码" placeholder="请输入新密码（如需修改）" class="layui-input">
+                            <span class="help-block">如需修改密码，请输入新密码，至少6位字符.</span>
+                        </label>
+                    </div>
+                    <div class="layui-col-xs6">
+                        <label class="block relative">
+                            <span class="help-label"><b>确认密码</b></span>
+                            <input type="password" name="confirm_password" autocomplete="new-password" pattern="^.{6,}$" vali-name="确认密码" placeholder="请再次输入新密码" class="layui-input">
+                            <span class="help-block">请再次输入新密码以确认.</span>
+                        </label>
+                    </div>
+            </fieldset>
+        </div>
+        <div class="hr-line-dashed"></div>
+        {notempty name='vo.id'}<input type='hidden' value='{$vo.id}' name='id'>{/notempty}
+        <div class="layui-form-item text-center">
+            <button class="layui-btn layui-btn-warm" type="button" onclick="location.href='{:url(\'user/logout\')}'">退出登录</button>
+            <button class="layui-btn layui-btn-normal" type="button" id="updatePasswordBtn">修改密码</button>
+        </div>
+    </form>
+</div>
+<script>
+document.getElementById('updatePasswordBtn').addEventListener('click', function() {
+    var form = document.getElementById('passwordForm');
+    var formData = new FormData(form);
+    fetch("{:url('user/pass')}", {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin"
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 1) {
+            layer.msg(data.info || '密码修改成功', {
+                icon: 1,
+                end: function() {
+                    if (parent && parent.layer) {
+                        var index = parent.layer.getFrameIndex(window.name);
+                        parent.layer.close(index);
+                    }
+                }
+            });
+        } else {
+            layer.msg(data.info || '密码修改失败', {icon: 2});
+        }
+    })
+    .catch(() => {
+        layer.msg('请求失败', {icon: 2});
+    });
+});
+</script>
